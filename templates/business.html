@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title.part1 }} - {{ title.part2 }}{% endblock %}
+
+{% block content %}
+<style>
+    [contenteditable="true"] {
+        border: 1px dashed #007bff;
+        padding: 5px;
+        margin: 5px 0;
+        border-radius: 4px;
+    }
+    [contenteditable="true"]:focus {
+        outline: none;
+        border-color: #0056b3;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    }
+    .card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        transition: box-shadow 0.3s ease-in-out;
+    }
+    .card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .btn-primary, .btn-success {
+        transition: background-color 0.3s ease-in-out;
+    }
+    .btn-primary:hover, .btn-success:hover {
+        opacity: 0.9;
+    }
+</style>
+
+<h1 class="mb-4">
+    <span contenteditable="true">{{ title.part1 }}</span>
+    <br>
+    <span contenteditable="true">{{ title.part2 }}</span>
+</h1>
+<p class="lead" contenteditable="true">{{ description }}</p>
+
+<div class="row">
+    {% for card in cards %}
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title" contenteditable="true">{{ card.title }}</h5>
+                <p class="card-text" contenteditable="true">{{ card.description }}</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-6">
+        <h2 contenteditable="true">{{ left_section.heading }}</h2>
+        <div id="questionsList">
+            {% for question in left_section.questions %}
+            <div class="question-item mb-3">
+                <h5 contenteditable="true" data-question-index="{{ loop.index0 }}">{{ question.question }}</h5>
+                {% if question.type == "radio" %}
+                    {% for option in question.options %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="question{{ loop.index0 }}" id="option{{ loop.index0 }}{{ loop.index }}">
+                        <label class="form-check-label" for="option{{ loop.index0 }}{{ loop.index }}" contenteditable="true">
+                            {{ option }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                {% elif question.type == "range" %}
+                    {% for option in question.options %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="question{{ loop.index0 }}" id="option{{ loop.index0 }}{{ loop.index }}">
+                        <label class="form-check-label" for="option{{ loop.index0 }}{{ loop.index }}" contenteditable="true">
+                            {{ option.value }} - {{ option.price }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+                <button class="btn btn-sm btn-primary mt-2" onclick="addOption({{ loop.index0 }})">Add Option</button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="col-md-6">
+        <h2 contenteditable="true">{{ right_section.heading }}</h2>
+        <h3 contenteditable="true">{{ right_section.subheading }}</h3>
+        <ul id="benefitsList">
+            {% for point in right_section.points %}
+            <li contenteditable="true">{{ point }}</li>
+            {% endfor %}
+        </ul>
+        <button class="btn btn-primary mb-3" onclick="addBenefit()">Naya Benefit Add Karein</button>
+        
+        <h3 contenteditable="true">{{ right_section.sub_heading }}</h3>
+        <div id="guaranteeList" class="text-center">
+            {% for guarantee in right_section.cpa %}
+            <p contenteditable="true">{{ guarantee }}</p>
+            {% endfor %}
+        </div>
+        <button class="btn btn-primary mb-3" onclick="addGuarantee()">Nayi Guarantee Add Karein</button>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <button class="btn btn-success" onclick="saveChanges()">Save All Changes</button>
+    </div>
+</div>
+
+<script>
+    function addBenefit() {
+        const benefitsList = document.getElementById('benefitsList');
+        const newBenefit = document.createElement('li');
+        newBenefit.contentEditable = true;
+        newBenefit.textContent = 'Naya business benefit yahan likhein';
+        benefitsList.appendChild(newBenefit);
+    }
+
+    function addOption(questionIndex) {
+        const newOption = prompt("Enter new option:");
+        if (newOption) {
+            fetch('/add-option', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ questionIndex: questionIndex, newOption: newOption }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert('Option added successfully!');
+                    location.reload();
+                } else {
+                    alert('Error adding option: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                alert('Error adding option. Please try again.');
+            });
+        }
+    }
+
+    function addGuarantee() {
+        const guaranteeList = document.getElementById('guaranteeList');
+        const newGuarantee = document.createElement('p');
+        newGuarantee.contentEditable = true;
+        newGuarantee.textContent = 'Nayi business guarantee yahan likhein';
+        guaranteeList.appendChild(newGuarantee);
+    }
+
+    function saveChanges() {
+        // Collect all editable content
+        const editableContent = {
+            title: {
+                part1: document.querySelector('h1.mb-4 span:first-child').textContent,
+                part2: document.querySelector('h1.mb-4 span:last-child').textContent
+            },
+            description: document.querySelector('p.lead').textContent,
+            cards: Array.from(document.querySelectorAll('.card')).map(card => ({
+                title: card.querySelector('.card-title').textContent,
+                description: card.querySelector('.card-text').textContent
+            })),
+            left_section: {
+                heading: document.querySelector('.col-md-6 h2').textContent,
+                questions: Array.from(document.querySelectorAll('.question-item')).map((question, index) => ({
+                    question: question.querySelector('h5').textContent,
+                    type: question.querySelector('.form-check-input').type,
+                    options: Array.from(question.querySelectorAll('.form-check-label')).map(label => label.textContent.trim())
+                }))
+            },
+            right_section: {
+                heading: document.querySelector('.col-md-6:last-child h2').textContent,
+                subheading: document.querySelector('.col-md-6:last-child h3').textContent,
+                points: Array.from(document.querySelectorAll('#benefitsList li')).map(benefit => benefit.textContent),
+                sub_heading: document.querySelector('.col-md-6:last-child h3:last-of-type').textContent,
+                cpa: Array.from(document.querySelectorAll('#guaranteeList p')).map(guarantee => guarantee.textContent)
+            }
+        };
+
+        // Send data to server using AJAX
+        fetch('/save-business-changes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(editableContent),
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Success:', data);
+            alert('Changes saved successfully!');
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            alert('Error saving changes. Please try again.');
+        });
+    }
+
+    // Add event listeners to update questions
+    document.querySelectorAll('.question-item h5').forEach(questionElement => {
+        questionElement.addEventListener('blur', function() {
+            const questionIndex = this.dataset.questionIndex;
+            const newQuestion = this.textContent;
+            updateQuestion(questionIndex, newQuestion);
+        });
+    });
+
+    function updateQuestion(questionIndex, newQuestion) {
+        fetch('/update-question', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ questionIndex: questionIndex, newQuestion: newQuestion }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                console.log('Question updated successfully!');
+            } else {
+                console.error('Error updating question.');
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+    [contenteditable="true"] {
+        border: 1px dashed #007bff;
+        padding: 5px;
+        margin: 5px 0;
+        border-radius: 4px;
+    }
+    [contenteditable="true"]:focus {
+        outline: none;
+        border-color: #0056b3;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    }
+    .card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        transition: box-shadow 0.3s ease-in-out;
+    }
+    .card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .btn-primary, .btn-success {
+        transition: background-color 0.3s ease-in-out;
+    }
+    .btn-primary:hover, .btn-success:hover {
+        opacity: 0.9;
+    }
+</style>
+
+<h1 class="mb-4">
+    <span contenteditable="true">{{ title.part1 }}</span>
+    <br>
+    <span contenteditable="true">{{ title.part2 }}</span>
+</h1>
+<p class="lead" contenteditable="true">{{ description }}</p>
+
+<div class="row">
+    {% for card in cards %}
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title" contenteditable="true">{{ card.title }}</h5>
+                <p class="card-text" contenteditable="true">{{ card.description }}</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-6">
+        <h2 contenteditable="true">{{ left_section.heading }}</h2>
+        <div id="optionsList">
+            {% for option in left_section.checkboxes %}
+            <div class="option-item mb-3">
+                <div class="d-flex align-items-center">
+                    <input type="text" class="form-control me-2" style="width: 200px;" placeholder="Icon URL ya file upload karein" value="{{ option.icon }}">
+                    <span contenteditable="true">{{ option.title }} - {{ option.price }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <button class="btn btn-primary mb-3" onclick="addOption()">Naya Option Add Karein</button>
+    </div>
+    <div class="col-md-6">
+        <h2 contenteditable="true">{{ right_section.heading }}</h2>
+        <h3 contenteditable="true">{{ right_section.subheading }}</h3>
+        <ul id="benefitsList">
+            {% for point in right_section.points %}
+            <li contenteditable="true">{{ point }}</li>
+            {% endfor %}
+        </ul>
+        <button class="btn btn-primary mb-3" onclick="addBenefit()">Naya Benefit Add Karein</button>
+        
+        <h3 contenteditable="true">{{ right_section.sub_heading }}</h3>
+        <div id="guaranteeList" class="text-center">
+            {% for guarantee in right_section.cpa %}
+            <p contenteditable="true">{{ guarantee }}</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <button class="btn btn-success" onclick="saveChanges()">Save All Changes</button>
+    </div>
+</div>
+
+<script>
+    function addBenefit() {
+        const benefitsList = document.getElementById('benefitsList');
+        const newBenefit = document.createElement('li');
+        newBenefit.contentEditable = true;
+        newBenefit.textContent = 'Naya benefit yahan likhein';
+        benefitsList.appendChild(newBenefit);
+    }
+
+    function addOption() {
+        const optionsList = document.getElementById('optionsList');
+        const newOption = document.createElement('div');
+        newOption.className = 'option-item mb-3';
+        newOption.innerHTML = `
+            <div class="d-flex align-items-center">
+                <input type="text" class="form-control me-2" style="width: 200px;" placeholder="Icon URL ya file upload karein" value="/static/images/default-icon.png">
+                <span contenteditable="true">Naya Option - ₹0</span>
+            </div>
+        `;
+        optionsList.appendChild(newOption);
+    }
+
+    function saveChanges() {
+        // Collect all editable content
+        const editableContent = {
+            title: {
+                part1: document.querySelector('h1.mb-4 span:first-child').textContent,
+                part2: document.querySelector('h1.mb-4 span:last-child').textContent
+            },
+            description: document.querySelector('p.lead').textContent,
+            cards: Array.from(document.querySelectorAll('.card')).map(card => ({
+                title: card.querySelector('.card-title').textContent,
+                description: card.querySelector('.card-text').textContent
+            })),
+            left_section: {
+                heading: document.querySelector('.col-md-6 h2').textContent,
+                checkboxes: Array.from(document.querySelectorAll('.option-item')).map(option => ({
+                    icon: option.querySelector('input').value,
+                    title: option.querySelector('span').textContent.split(' - ')[0],
+                    price: option.querySelector('span').textContent.split(' - ')[1],
+                    visible: true
+                }))
+            },
+            right_section: {
+                heading: document.querySelector('.col-md-6:last-child h2').textContent,
+                subheading: document.querySelector('.col-md-6:last-child h3').textContent,
+                points: Array.from(document.querySelectorAll('#benefitsList li')).map(benefit => benefit.textContent),
+                sub_heading: document.querySelector('.col-md-6:last-child h3:last-of-type').textContent,
+                cpa: Array.from(document.querySelectorAll('#guaranteeList p')).map(guarantee => guarantee.textContent).slice(0, 2)
+            }
+        };
+
+        // Send data to server using AJAX
+        fetch('/save-changes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(editableContent),
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Success:', data);
+            alert('Changes saved successfully!');
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            alert('Error saving changes. Please try again.');
+        });
+    }
+</script>
+{% endblock %}

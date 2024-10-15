@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Welcome to TaxPlan</h1>
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Individual Tax Planning</h5>
+                <p class="card-text">Manage your personal tax information here.</p>
+                <a href="/individual" class="btn btn-primary">Go to Individual</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Business Tax Planning</h5>
+                <p class="card-text">Manage your business tax information here.</p>
+                <a href="/business" class="btn btn-primary">Go to Business</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
